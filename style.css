@@ -1,26 +1,59 @@
-.container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: #f0f0f0;
+body { 
+  font-family: sans-serif; 
+  margin:0; 
+  overflow:hidden; 
+  background:black; 
+  color:yellow;
 }
 
-h1 {
-  font-size: 2.5em;
-  color: #333;
+#word-grid { 
+  display:flex; 
+  flex-wrap:wrap; 
+  gap:10px; 
+  position:absolute; 
+  top:10%; 
+  left:50%; 
+  transform:translateX(-50%); 
 }
 
-button {
-  padding: 10px 20px;
-  font-size: 1em;
-  color: #fff;
-  background-color: #007BFF;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.word { 
+  padding:10px 15px; 
+  border:2px solid gray; 
+  border-radius:5px; 
+  font-size:20px; 
+  cursor:pointer; 
+  background-color:gray; 
+  color:black;
 }
 
-button:hover {
-  background-color: #0056b3;
+.word.active { 
+  border-color: green; 
+  color: yellow;  /* active word text is yellow */
+  font-weight: bold;
 }
+
+#sentence-container { 
+  position:absolute; 
+  bottom:10%; 
+  left:50%; 
+  transform:translateX(-50%); 
+  background:black; 
+  padding:10px; 
+  border-radius:5px; 
+  color:yellow;
+  font-weight:bold;
+  font-size:24px;
+}
+
+#instructions { 
+  position:absolute; 
+  top:5%; 
+  right:5%; 
+  background:black; 
+  padding:10px; 
+  border-radius:5px; 
+  cursor:grab; 
+}
+
+#hide-instructions { margin-top:5px; }
+#play-btn { margin-left:10px; }

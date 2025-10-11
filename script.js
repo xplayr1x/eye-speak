@@ -51,7 +51,6 @@ function updateActiveWord(index) {
   });
 }
 
-
 function selectWord(index) {
   sentenceSpan.textContent += words[index].textContent + " ";
 }
@@ -77,16 +76,23 @@ function speakSentence() {
 }
 playBtn.addEventListener('click', speakSentence);
 
+function stopSpeaking() {
+  speechSynthesis.cancel();
+}
+
 // --- Eye tracking setup ---
 const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
 faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
 
 let gazeDelay = 0;
 const EAR_THRESHOLD = 0.25;
-const MIN_FRAMES_CLOSED = 2;
 const BLINK_COOLDOWN = 400;
 const LONG_BLINK_DURATION = 600;
+const HOLD_DURATION = 1200; // ms to hold eye closed for hold action
+
 let framesClosed = 0, lastBlinkTime = 0, blinkStartTime = 0;
+let rightEyeHoldStart = 0, rightEyeHoldActive = false, rightEyeHoldDone = false;
+let leftEyeHoldStart = 0, leftEyeHoldActive = false, leftEyeHoldDone = false;
 
 faceMesh.onResults((results) => {
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -94,7 +100,76 @@ faceMesh.onResults((results) => {
   const lm = results.multiFaceLandmarks[0];
   const now = Date.now();
 
+  // --- Eye Ratio Calculation ---
+  // earL: user's right eye, earR: user's left eye (mirrored from camera)
+  const earL = Math.hypot(lm[159].x-lm[145].x, lm[159].y-lm[145].y) / Math.hypot(lm[33].x-lm[133].x, lm[33].y-lm[133].y);
+  const earR = Math.hypot(lm[386].x-lm[374].x, lm[386].y-lm[374].y) / Math.hypot(lm[362].x-lm[263].x, lm[362].y-lm[263].y);
+
+  // --- Hold user's right eye closed to stop sound ---
+  if (earL < EAR_THRESHOLD && earR >= EAR_THRESHOLD) {
+    if (!rightEyeHoldActive) {
+      rightEyeHoldStart = now;
+      rightEyeHoldActive = true;
+      rightEyeHoldDone = false;
+    }
+    if (!rightEyeHoldDone && now - rightEyeHoldStart > HOLD_DURATION) {
+      stopSpeaking();
+      lastBlinkTime = now;
+      rightEyeHoldDone = true;
+    }
+  } else if (rightEyeHoldActive) {
+    // If released before HOLD_DURATION, treat as a blink (select word)
+    if (!rightEyeHoldDone && now - rightEyeHoldStart > BLINK_COOLDOWN) {
+      selectWord(activeIndex);
+      lastBlinkTime = now;
+    }
+    rightEyeHoldActive = false;
+    rightEyeHoldDone = false;
+    rightEyeHoldStart = 0;
+  }
+
+  // --- Hold user's left eye closed to delete last word ---
+  if (earR < EAR_THRESHOLD && earL >= EAR_THRESHOLD) {
+    if (!leftEyeHoldActive) {
+      leftEyeHoldStart = now;
+      leftEyeHoldActive = true;
+      leftEyeHoldDone = false;
+    }
+    if (!leftEyeHoldDone && now - leftEyeHoldStart > HOLD_DURATION) {
+      // delete last word
+      const arr = sentenceSpan.textContent.trim().split(" ");
+      arr.pop();
+      sentenceSpan.textContent = arr.join(" ") + (arr.length ? " " : "");
+      lastBlinkTime = now;
+      leftEyeHoldDone = true;
+    }
+  } else if (leftEyeHoldActive) {
+    // If released before HOLD_DURATION, treat as a blink (play sentence)
+    if (!leftEyeHoldDone && now - leftEyeHoldStart > BLINK_COOLDOWN) {
+      speakSentence();
+      lastBlinkTime = now;
+    }
+    leftEyeHoldActive = false;
+    leftEyeHoldDone = false;
+    leftEyeHoldStart = 0;
+  }
+
+  // --- Both eyes closed (long blink) to clear sentence ---
+  if (earL < EAR_THRESHOLD && earR < EAR_THRESHOLD) {
+    framesClosed++;
+    if (framesClosed === 1) blinkStartTime = now;
+    if (now - blinkStartTime >= LONG_BLINK_DURATION && now - lastBlinkTime > BLINK_COOLDOWN) {
+      sentenceSpan.textContent = "";
+      lastBlinkTime = now;
+      framesClosed = 0;
+    }
+  } else {
+    framesClosed = 0;
+    blinkStartTime = 0;
+  }
+
   // --- Horizontal gaze movement ---
+  // Uses left eye (code), which is user's right eye (mirrored)
   const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
   const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
   if(now - gazeDelay > 500){
@@ -103,42 +178,18 @@ faceMesh.onResults((results) => {
     gazeDelay = now;
   }
 
-  // --- Blink detection ---
-  const topL = lm[159], bottomL = lm[145], topR = lm[386], bottomR = lm[374];
-  const leftCornerL = lm[33], rightCornerL = lm[133], leftCornerR = lm[362], rightCornerR = lm[263];
-  const earL = Math.hypot(topL.x-bottomL.x, topL.y-bottomL.y) / Math.hypot(leftCornerL.x-rightCornerL.x,leftCornerL.y-rightCornerL.y);
-  const earR = Math.hypot(topR.x-bottomR.x, topR.y-bottomR.y) / Math.hypot(leftCornerR.x-rightCornerR.x,leftCornerR.y-rightCornerR.y);
-  const ear = (earL + earR)/2;
-
-  if(ear < EAR_THRESHOLD){
-    framesClosed++;
-    if(framesClosed === 1) blinkStartTime = now;
-    if(now - blinkStartTime >= LONG_BLINK_DURATION && now - lastBlinkTime > BLINK_COOLDOWN){
-      sentenceSpan.textContent = "";
-      lastBlinkTime = now;
-      framesClosed = 0;
-    }
-  } else {
-    // Right eye only → delete last word
-    if(earR < EAR_THRESHOLD && earL >= EAR_THRESHOLD && now - lastBlinkTime > BLINK_COOLDOWN){
-      const arr = sentenceSpan.textContent.trim().split(" ");
-      arr.pop();
-      sentenceSpan.textContent = arr.join(" ") + (arr.length ? " " : "");
-      lastBlinkTime = now;
-    }
-    // Left eye only → play sentence
-    else if(earL < EAR_THRESHOLD && earR >= EAR_THRESHOLD && now - lastBlinkTime > BLINK_COOLDOWN){
-      speakSentence();
-      lastBlinkTime = now;
-    }
-    // Short blink → select word
-    else if(framesClosed >= MIN_FRAMES_CLOSED && now - lastBlinkTime > BLINK_COOLDOWN && now - blinkStartTime < LONG_BLINK_DURATION){
-      selectWord(activeIndex);
-      lastBlinkTime = now;
-    }
-    framesClosed = 0;
-    blinkStartTime = 0;
+  // --- Look Up Gesture (optional): select word
+  // If you want to keep this, it uses left eye (code), i.e. user's right eye
+  /*
+  const leftEyeTop = lm[159], leftEyeBottom = lm[145];
+  const eyeHeight = leftEyeBottom.y - leftEyeTop.y;
+  const leftIrisY = lm[468].y;
+  const irisToTop = leftIrisY - leftEyeTop.y;
+  if(irisToTop / eyeHeight < 0.2 && now - lookUpDelay > 1000){
+    selectWord(activeIndex);
+    lookUpDelay = now;
   }
+  */
 });
 
 // --- Start camera ---

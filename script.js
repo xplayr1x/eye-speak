@@ -13,10 +13,10 @@ canvas.height = window.innerHeight;
 
 // --- Word list ---
 const wordsArray = [
-  "I","You","We","They","He","She",
+  "yes","no","I","You","We","They","He","She",
   "want","need","like","love","hate","see",
   "go","come","stop","mum","eat","drink",
-  "now","later","today","tomorrow","yes","no",
+  "now","later","today","tomorrow",
   "happy","sad","more","am","angry","tired","good","bad",
   "really","very","so","too","much","a lot",
   "hello","bye","please","thanks","help","sorry",
@@ -99,7 +99,7 @@ faceMesh.onResults((results) => {
   const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
   if(now - gazeDelay > 500){
     if(ratioX < 0.45) updateActiveWord((activeIndex-1 + words.length) % words.length);
-    else if(ratioX > 0.65) updateActiveWord((activeIndex+1) % words.length);
+    else if(ratioX > 0.60) updateActiveWord((activeIndex+1) % words.length);
     gazeDelay = now;
   }
 

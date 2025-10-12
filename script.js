@@ -80,12 +80,15 @@ function stopSpeaking() {
   speechSynthesis.cancel();
 }
 
-// --- Ensure play button is enabled on screen refresh ---
-window.addEventListener('DOMContentLoaded', () => {
+// --- Ensure play button is always enabled ---
+function enablePlayBtn() {
   playBtn.disabled = false;
   playBtn.style.opacity = 1;
   playBtn.style.pointerEvents = 'auto';
-});
+}
+// Always keep play button enabled -- on load and every 500ms
+window.addEventListener('DOMContentLoaded', enablePlayBtn);
+setInterval(enablePlayBtn, 500);
 
 // --- Eye tracking setup ---
 const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
@@ -153,11 +156,6 @@ faceMesh.onResults((results) => {
   } else if (leftEyeHoldActive) {
     // If released before HOLD_DURATION, treat as a blink (play sentence)
     if (!leftEyeHoldDone && now - leftEyeHoldStart > BLINK_COOLDOWN) {
-      // Enable the play button on left eye blink
-      playBtn.disabled = false;
-      playBtn.style.opacity = 1;
-      playBtn.style.pointerEvents = 'auto';
-
       speakSentence();
       lastBlinkTime = now;
     }
@@ -181,7 +179,6 @@ faceMesh.onResults((results) => {
   }
 
   // --- Horizontal gaze movement ---
-  // Uses left eye (code), which is user's right eye (mirrored)
   const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
   const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
   if(now - gazeDelay > 500){
@@ -191,7 +188,6 @@ faceMesh.onResults((results) => {
   }
 
   // --- Look Up Gesture (optional): select word
-  // If you want to keep this, it uses left eye (code), i.e. user's right eye
   /*
   const leftEyeTop = lm[159], leftEyeBottom = lm[145];
   const eyeHeight = leftEyeBottom.y - leftEyeTop.y;

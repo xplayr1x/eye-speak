@@ -80,6 +80,13 @@ function stopSpeaking() {
   speechSynthesis.cancel();
 }
 
+// --- Ensure play button is enabled on screen refresh ---
+window.addEventListener('DOMContentLoaded', () => {
+  playBtn.disabled = false;
+  playBtn.style.opacity = 1;
+  playBtn.style.pointerEvents = 'auto';
+});
+
 // --- Eye tracking setup ---
 const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
 faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });

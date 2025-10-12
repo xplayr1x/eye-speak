@@ -153,6 +153,11 @@ faceMesh.onResults((results) => {
   } else if (leftEyeHoldActive) {
     // If released before HOLD_DURATION, treat as a blink (play sentence)
     if (!leftEyeHoldDone && now - leftEyeHoldStart > BLINK_COOLDOWN) {
+      // Enable the play button on left eye blink
+      playBtn.disabled = false;
+      playBtn.style.opacity = 1;
+      playBtn.style.pointerEvents = 'auto';
+
       speakSentence();
       lastBlinkTime = now;
     }

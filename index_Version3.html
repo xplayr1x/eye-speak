@@ -1,9 +1,48 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Eye Speak</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eye Speak - Version 3</title>
+  <link rel="stylesheet" href="style_Version3.css">
 </head>
 <body>
-    <h1>Welcome to Eye Speak</h1>
-    <p>This is version 2 of the index file.</p>
+
+  <!-- Sentence bar with play button -->
+  <div id="sentence-bar">
+    <span id="sentence"></span>
+    <button id="play-btn">Play</button>
+  </div>
+
+  <!-- Toggle buttons container for switching between grids -->
+  <div id="toggle-container">
+    <button id="letters-btn" class="toggle-btn">Letters</button>
+    <button id="words-btn" class="toggle-btn" style="display: none;">Words</button>
+  </div>
+
+  <!-- Word grid container -->
+  <div id="word-grid"></div>
+
+  <!-- Letters/Numbers grid container (hidden by default) -->
+  <div id="letters-grid" style="display: none;"></div>
+
+  <!-- Instructions panel -->
+  <div id="instructions">
+    <button id="hide-instructions">Hide Instructions</button>
+    <p>Left eye Blink = play sentence</p>
+    <p>Right eye close = stops sound</p>
+    <p>Left eye close = delete last word/letter</p>
+    <p>Right eye blink = select word/letter</p>
+    <p>Long blink = clear all</p>
+    <p>Touch = select word/letter</p>
+  </div>
+
+  <!-- Video and canvas for camera (hidden) -->
+  <video id="video" autoplay playsinline></video>
+  <canvas id="output"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="script_Version3.js"></script>
 </body>
 </html>

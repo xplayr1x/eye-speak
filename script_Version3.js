@@ -1,8 +1,10 @@
+// --- Eye-Typing Keyboard Version (Spelling out words with letters) ---
+
 const video = document.getElementById('video');
 const canvas = document.getElementById('output');
 const ctx = canvas.getContext('2d');
 
-const wordGrid = document.getElementById('word-grid');
+const letterGrid = document.getElementById('word-grid');
 const sentenceSpan = document.getElementById('sentence');
 const playBtn = document.getElementById('play-btn');
 const instructions = document.getElementById('instructions');
@@ -11,43 +13,48 @@ const hideInstructionsBtn = document.getElementById('hide-instructions');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// --- Word list ---
-const wordsArray = [
-   "yes","no","0","1","3","4","5","6","7","8","9",
-  "A","B","C","D","E","F","G","H","I",
-  "J","K","L","M","N","O","P","Q","R",
-  "S","T","U","V","W","X","Y","Z"
+// --- Letter list ---
+const lettersArray = [
+  ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  "Space", "Delete"
 ];
 
-let words = [];
+let letters = [];
 let activeIndex = 0;
 
-// --- Populate word grid ---
-wordsArray.forEach((w, i) => {
+// --- Populate letter grid ---
+lettersArray.forEach((l, i) => {
   const div = document.createElement('div');
-  div.className = 'word';
-  div.textContent = w;
-  div.addEventListener('click', () => selectWord(i));
-  wordGrid.appendChild(div);
-  words.push(div);
+  div.className = 'letter';
+  div.textContent = l;
+  div.addEventListener('click', () => selectLetter(i));
+  letterGrid.appendChild(div);
+  letters.push(div);
 });
 
-words[activeIndex].classList.add('active');
+letters[activeIndex].classList.add('active');
 
-function updateActiveWord(index) {
-  words.forEach((w, i) => w.classList.toggle('active', i === index));
+function updateActiveLetter(index) {
+  letters.forEach((l, i) => l.classList.toggle('active', i === index));
   activeIndex = index;
 
-  // Automatically scroll the active word into view
-  const activeWord = words[index];
-  activeWord.scrollIntoView({
+  // Automatically scroll the active letter into view
+  const activeLetter = letters[index];
+  activeLetter.scrollIntoView({
     behavior: 'smooth',
-    block: 'center'  // keeps it centered vertically
+    block: 'center'
   });
 }
 
-function selectWord(index) {
-  sentenceSpan.textContent += words[index].textContent + " ";
+function selectLetter(index) {
+  const value = letters[index].textContent;
+  if (value === "Space") {
+    sentenceSpan.textContent += " ";
+  } else if (value === "Delete") {
+    sentenceSpan.textContent = sentenceSpan.textContent.slice(0, -1);
+  } else {
+    sentenceSpan.textContent += value;
+  }
 }
 
 // --- Instructions panel drag & hide ---
@@ -81,7 +88,6 @@ function enablePlayBtn() {
   playBtn.style.opacity = 1;
   playBtn.style.pointerEvents = 'auto';
 }
-// Always keep play button enabled -- on load and every 500ms
 window.addEventListener('DOMContentLoaded', enablePlayBtn);
 setInterval(enablePlayBtn, 500);
 
@@ -123,9 +129,9 @@ faceMesh.onResults((results) => {
       rightEyeHoldDone = true;
     }
   } else if (rightEyeHoldActive) {
-    // If released before HOLD_DURATION, treat as a blink (select word)
+    // If released before HOLD_DURATION, treat as a blink (select letter)
     if (!rightEyeHoldDone && now - rightEyeHoldStart > BLINK_COOLDOWN) {
-      selectWord(activeIndex);
+      selectLetter(activeIndex);
       lastBlinkTime = now;
     }
     rightEyeHoldActive = false;
@@ -133,7 +139,7 @@ faceMesh.onResults((results) => {
     rightEyeHoldStart = 0;
   }
 
-  // --- Hold user's left eye closed to delete last word ---
+  // --- Hold user's left eye closed to delete last letter ---
   if (earR < EAR_THRESHOLD && earL >= EAR_THRESHOLD) {
     if (!leftEyeHoldActive) {
       leftEyeHoldStart = now;
@@ -141,10 +147,8 @@ faceMesh.onResults((results) => {
       leftEyeHoldDone = false;
     }
     if (!leftEyeHoldDone && now - leftEyeHoldStart > HOLD_DURATION) {
-      // delete last word
-      const arr = sentenceSpan.textContent.trim().split(" ");
-      arr.pop();
-      sentenceSpan.textContent = arr.join(" ") + (arr.length ? " " : "");
+      // delete last letter (just like pressing "Delete" key)
+      sentenceSpan.textContent = sentenceSpan.textContent.slice(0, -1);
       lastBlinkTime = now;
       leftEyeHoldDone = true;
     }
@@ -177,22 +181,10 @@ faceMesh.onResults((results) => {
   const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
   const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
   if(now - gazeDelay > 500){
-    if(ratioX < 0.45) updateActiveWord((activeIndex-1 + words.length) % words.length);
-    else if(ratioX > 0.60) updateActiveWord((activeIndex+1) % words.length);
+    if(ratioX < 0.45) updateActiveLetter((activeIndex-1 + letters.length) % letters.length);
+    else if(ratioX > 0.60) updateActiveLetter((activeIndex+1) % letters.length);
     gazeDelay = now;
   }
-
-  // --- Look Up Gesture (optional): select word
-  /*
-  const leftEyeTop = lm[159], leftEyeBottom = lm[145];
-  const eyeHeight = leftEyeBottom.y - leftEyeTop.y;
-  const leftIrisY = lm[468].y;
-  const irisToTop = leftIrisY - leftEyeTop.y;
-  if(irisToTop / eyeHeight < 0.2 && now - lookUpDelay > 1000){
-    selectWord(activeIndex);
-    lookUpDelay = now;
-  }
-  */
 });
 
 // --- Start camera ---

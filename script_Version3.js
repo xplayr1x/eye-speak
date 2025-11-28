@@ -15,6 +15,7 @@ canvas.height = window.innerHeight;
 
 // --- Letters, Numbers + Special Keys (Each gets a box) ---
 const lettersArray = [
+  
   ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
   ..."0123456789",
   "Space", "Delete"
@@ -184,7 +185,7 @@ faceMesh.onResults((results) => {
   const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
   const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
   if(now - gazeDelay > 500){
-    if(ratioX < 0.45) setActiveLetter((activeIndex-1 + letters.length) % letters.length);
+    if(ratioX < 0.38) setActiveLetter((activeIndex-1 + letters.length) % letters.length);
     else if(ratioX > 0.60) setActiveLetter((activeIndex+1) % letters.length);
     gazeDelay = now;
   }

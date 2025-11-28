@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard with Letters, Numbers, Special Keys, and Boxed UI ---
+// --- Eye-Typing Keyboard: Both-Eyes Blink = Space Only ---
 
 const video = document.getElementById('video');
 const canvas = document.getElementById('output');
@@ -15,7 +15,6 @@ canvas.height = window.innerHeight;
 
 // --- Letters, Numbers + Special Keys (Each gets a box) ---
 const lettersArray = [
-  
   ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
   ..."0123456789",
   "Space", "Delete"
@@ -25,7 +24,7 @@ let letters = [];
 let activeIndex = 0;
 
 // --- Populate grid ---
-letterGrid.innerHTML = ''; // Clear any previous
+letterGrid.innerHTML = '';
 lettersArray.forEach((l, i) => {
   const div = document.createElement('div');
   div.className = 'letter';
@@ -41,8 +40,6 @@ setActiveLetter(0);
 function setActiveLetter(index) {
   letters.forEach((l, i) => l.classList.toggle('active', i === index));
   activeIndex = index;
-
-  // Scroll the active letter into view if necessary
   letters[index].scrollIntoView({
     behavior: 'smooth',
     block: 'center',
@@ -50,7 +47,6 @@ function setActiveLetter(index) {
   });
 }
 
-// Eye/keyboard-based selection
 function selectLetter(index) {
   const value = letters[index].textContent;
   if (value === "Space") {
@@ -103,7 +99,6 @@ faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidenc
 let gazeDelay = 0;
 const EAR_THRESHOLD = 0.25;
 const BLINK_COOLDOWN = 400;
-const LONG_BLINK_DURATION = 600;
 const HOLD_DURATION = 1200;
 
 let framesClosed = 0, lastBlinkTime = 0, blinkStartTime = 0;
@@ -133,7 +128,6 @@ faceMesh.onResults((results) => {
       rightEyeHoldDone = true;
     }
   } else if (rightEyeHoldActive) {
-    // If released before HOLD_DURATION, treat as a blink
     if (!rightEyeHoldDone && now - rightEyeHoldStart > BLINK_COOLDOWN) {
       selectLetter(activeIndex);
       lastBlinkTime = now;
@@ -151,13 +145,11 @@ faceMesh.onResults((results) => {
       leftEyeHoldDone = false;
     }
     if (!leftEyeHoldDone && now - leftEyeHoldStart > HOLD_DURATION) {
-      // delete last character
       sentenceSpan.textContent = sentenceSpan.textContent.slice(0, -1);
       lastBlinkTime = now;
       leftEyeHoldDone = true;
     }
   } else if (leftEyeHoldActive) {
-    // If released before HOLD_DURATION, treat as a blink
     if (!leftEyeHoldDone && now - leftEyeHoldStart > BLINK_COOLDOWN) {
       speakSentence();
       lastBlinkTime = now;
@@ -167,16 +159,21 @@ faceMesh.onResults((results) => {
     leftEyeHoldStart = 0;
   }
 
-  // --- Both eyes closed (long blink) to clear sentence ---
+  // --- Both eyes blink (any duration) to add space ---
   if (earL < EAR_THRESHOLD && earR < EAR_THRESHOLD) {
     framesClosed++;
     if (framesClosed === 1) blinkStartTime = now;
-    if (now - blinkStartTime >= LONG_BLINK_DURATION && now - lastBlinkTime > BLINK_COOLDOWN) {
-      sentenceSpan.textContent = "";
-      lastBlinkTime = now;
-      framesClosed = 0;
-    }
   } else {
+    if (framesClosed > 1 && now - lastBlinkTime > BLINK_COOLDOWN) {
+      const prevIndex = activeIndex;
+      const spaceIndex = lettersArray.findIndex(x => x === "Space");
+      if (spaceIndex > -1) {
+        setActiveLetter(spaceIndex);
+        selectLetter(spaceIndex);
+        setTimeout(() => setActiveLetter(prevIndex), 350);
+      }
+      lastBlinkTime = now;
+    }
     framesClosed = 0;
     blinkStartTime = 0;
   }
@@ -184,9 +181,9 @@ faceMesh.onResults((results) => {
   // --- Horizontal gaze movement: select previous/next letter ---
   const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
   const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
-  if(now - gazeDelay > 500){
-    if(ratioX < 0.38) setActiveLetter((activeIndex-1 + letters.length) % letters.length);
-    else if(ratioX > 0.60) setActiveLetter((activeIndex+1) % letters.length);
+  if(now - gazeDelay > 1000){ // less sensitive (1 sec interval)
+    if(ratioX < 0.42) setActiveLetter((activeIndex-1 + letters.length) % letters.length);
+    else if(ratioX > 0.58) setActiveLetter((activeIndex+1) % letters.length);
     gazeDelay = now;
   }
 });

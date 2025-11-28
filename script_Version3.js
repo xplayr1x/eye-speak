@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard with Numbers and Eye Controls restored ---
+// --- Eye-Typing Keyboard with Letters, Numbers, Special Keys, and Boxed UI ---
 
 const video = document.getElementById('video');
 const canvas = document.getElementById('output');
@@ -13,7 +13,7 @@ const hideInstructionsBtn = document.getElementById('hide-instructions');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// --- Letters, Numbers + Special Keys ---
+// --- Letters, Numbers + Special Keys (Each gets a box) ---
 const lettersArray = [
   ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
   ..."0123456789",
@@ -24,28 +24,32 @@ let letters = [];
 let activeIndex = 0;
 
 // --- Populate grid ---
+letterGrid.innerHTML = ''; // Clear any previous
 lettersArray.forEach((l, i) => {
   const div = document.createElement('div');
   div.className = 'letter';
   div.textContent = l;
+  div.tabIndex = 0;
   div.addEventListener('click', () => selectLetter(i));
   letterGrid.appendChild(div);
   letters.push(div);
 });
 
-letters[activeIndex].classList.add('active');
+setActiveLetter(0);
 
-function updateActiveLetter(index) {
+function setActiveLetter(index) {
   letters.forEach((l, i) => l.classList.toggle('active', i === index));
   activeIndex = index;
 
-  // Scroll active letter into view
+  // Scroll the active letter into view if necessary
   letters[index].scrollIntoView({
     behavior: 'smooth',
-    block: 'center'
+    block: 'center',
+    inline: 'center'
   });
 }
 
+// Eye/keyboard-based selection
 function selectLetter(index) {
   const value = letters[index].textContent;
   if (value === "Space") {
@@ -180,8 +184,8 @@ faceMesh.onResults((results) => {
   const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
   const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
   if(now - gazeDelay > 500){
-    if(ratioX < 0.45) updateActiveLetter((activeIndex-1 + letters.length) % letters.length);
-    else if(ratioX > 0.60) updateActiveLetter((activeIndex+1) % letters.length);
+    if(ratioX < 0.45) setActiveLetter((activeIndex-1 + letters.length) % letters.length);
+    else if(ratioX > 0.60) setActiveLetter((activeIndex+1) % letters.length);
     gazeDelay = now;
   }
 });

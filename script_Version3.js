@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard Version (Spelling out words with letters) ---
+// --- Eye-Typing Keyboard with Numbers and Eye Controls restored ---
 
 const video = document.getElementById('video');
 const canvas = document.getElementById('output');
@@ -13,16 +13,17 @@ const hideInstructionsBtn = document.getElementById('hide-instructions');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// --- Letter list ---
+// --- Letters, Numbers + Special Keys ---
 const lettersArray = [
   ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  ..."0123456789",
   "Space", "Delete"
 ];
 
 let letters = [];
 let activeIndex = 0;
 
-// --- Populate letter grid ---
+// --- Populate grid ---
 lettersArray.forEach((l, i) => {
   const div = document.createElement('div');
   div.className = 'letter';
@@ -38,9 +39,8 @@ function updateActiveLetter(index) {
   letters.forEach((l, i) => l.classList.toggle('active', i === index));
   activeIndex = index;
 
-  // Automatically scroll the active letter into view
-  const activeLetter = letters[index];
-  activeLetter.scrollIntoView({
+  // Scroll active letter into view
+  letters[index].scrollIntoView({
     behavior: 'smooth',
     block: 'center'
   });
@@ -91,7 +91,7 @@ function enablePlayBtn() {
 window.addEventListener('DOMContentLoaded', enablePlayBtn);
 setInterval(enablePlayBtn, 500);
 
-// --- Eye tracking setup ---
+// --- Eye Tracking with MediaPipe FaceMesh ---
 const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
 faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
 
@@ -99,7 +99,7 @@ let gazeDelay = 0;
 const EAR_THRESHOLD = 0.25;
 const BLINK_COOLDOWN = 400;
 const LONG_BLINK_DURATION = 600;
-const HOLD_DURATION = 1200; // ms to hold eye closed for hold action
+const HOLD_DURATION = 1200;
 
 let framesClosed = 0, lastBlinkTime = 0, blinkStartTime = 0;
 let rightEyeHoldStart = 0, rightEyeHoldActive = false, rightEyeHoldDone = false;
@@ -111,12 +111,11 @@ faceMesh.onResults((results) => {
   const lm = results.multiFaceLandmarks[0];
   const now = Date.now();
 
-  // --- Eye Ratio Calculation ---
-  // earL: user's right eye, earR: user's left eye (mirrored from camera)
+  // --- Eye Ratio Calculation (EAR) ---
   const earL = Math.hypot(lm[159].x-lm[145].x, lm[159].y-lm[145].y) / Math.hypot(lm[33].x-lm[133].x, lm[33].y-lm[133].y);
   const earR = Math.hypot(lm[386].x-lm[374].x, lm[386].y-lm[374].y) / Math.hypot(lm[362].x-lm[263].x, lm[362].y-lm[263].y);
 
-  // --- Hold user's right eye closed to stop sound ---
+  // --- Right eye hold: stop sound (long), blink: select letter (short) ---
   if (earL < EAR_THRESHOLD && earR >= EAR_THRESHOLD) {
     if (!rightEyeHoldActive) {
       rightEyeHoldStart = now;
@@ -129,7 +128,7 @@ faceMesh.onResults((results) => {
       rightEyeHoldDone = true;
     }
   } else if (rightEyeHoldActive) {
-    // If released before HOLD_DURATION, treat as a blink (select letter)
+    // If released before HOLD_DURATION, treat as a blink
     if (!rightEyeHoldDone && now - rightEyeHoldStart > BLINK_COOLDOWN) {
       selectLetter(activeIndex);
       lastBlinkTime = now;
@@ -139,7 +138,7 @@ faceMesh.onResults((results) => {
     rightEyeHoldStart = 0;
   }
 
-  // --- Hold user's left eye closed to delete last letter ---
+  // --- Left eye hold: delete last (long), blink: play sentence (short) ---
   if (earR < EAR_THRESHOLD && earL >= EAR_THRESHOLD) {
     if (!leftEyeHoldActive) {
       leftEyeHoldStart = now;
@@ -147,13 +146,13 @@ faceMesh.onResults((results) => {
       leftEyeHoldDone = false;
     }
     if (!leftEyeHoldDone && now - leftEyeHoldStart > HOLD_DURATION) {
-      // delete last letter (just like pressing "Delete" key)
+      // delete last character
       sentenceSpan.textContent = sentenceSpan.textContent.slice(0, -1);
       lastBlinkTime = now;
       leftEyeHoldDone = true;
     }
   } else if (leftEyeHoldActive) {
-    // If released before HOLD_DURATION, treat as a blink (play sentence)
+    // If released before HOLD_DURATION, treat as a blink
     if (!leftEyeHoldDone && now - leftEyeHoldStart > BLINK_COOLDOWN) {
       speakSentence();
       lastBlinkTime = now;
@@ -177,7 +176,7 @@ faceMesh.onResults((results) => {
     blinkStartTime = 0;
   }
 
-  // --- Horizontal gaze movement ---
+  // --- Horizontal gaze movement: select previous/next letter ---
   const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
   const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
   if(now - gazeDelay > 500){

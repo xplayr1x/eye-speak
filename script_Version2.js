@@ -13,15 +13,12 @@ canvas.height = window.innerHeight;
 
 // --- Word list ---
 const wordsArray = [
-  "yes","no","I","You","We","They","am","able","have","He","She",
-  "want","need","like","love","hate","see","because","this","is",
-  "go","come","stop","mum","eat","drink","trying","tried","what",
-  "now","later","today","tomorrow","fucking",
-  "happy","sad","more","am","angry","tired","good","bad",
-  "really","very","so","too","much","a lot",
-  "hello","bye","please","thanks","help","sorry",
-  "home","fuck","to","food","water","music",
-  "still","look","wait","okay","great","me"
+  "yes","no",
+  "0","1","3","4","5","6","7","8","9",
+  "A","B","C","D","E","F","G","H","I",
+  "J","K","L","M","N","O","P","Q","R",
+  "S","T","U","V","W","X","Y","Z"
+
 ];
 
 let words = [];

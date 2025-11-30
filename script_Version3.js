@@ -50,7 +50,10 @@ function setActiveLetter(index) {
 function selectLetter(index) {
   const value = letters[index].textContent;
   if (value === "Space") {
-    sentenceSpan.textContent += " ";
+    // Only add a space if last character is NOT a space and not empty
+    if (sentenceSpan.textContent.slice(-1) !== " " && sentenceSpan.textContent !== "") {
+      sentenceSpan.textContent += " ";
+    }
   } else if (value === "Delete") {
     sentenceSpan.textContent = sentenceSpan.textContent.slice(0, -1);
   } else {

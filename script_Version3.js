@@ -15,6 +15,7 @@ canvas.height = window.innerHeight;
 
 // --- Letters, Numbers + Special Keys (Each gets a box) ---
 const lettersArray = [
+  "YES", "NO",   // Big-Button selections
   ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
   ..."0123456789",
   "Space", "Delete"

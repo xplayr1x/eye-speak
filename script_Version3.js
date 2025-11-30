@@ -198,3 +198,15 @@ const camera = new Camera(video, {
   width:640, height:480
 });
 camera.start();
+const yesBtn = document.getElementById('yes-btn');
+const noBtn = document.getElementById('no-btn');
+
+// Visual sync: highlight YES/NO button when active
+function setActiveLetter(index) {
+  letters.forEach((l, i) => l.classList.toggle('active', i === index));
+  yesBtn.classList.toggle('selected', index === 0);
+  noBtn.classList.toggle('selected', index === 1);
+  activeIndex = index;
+  // Only scroll grid if not yes/no buttons
+  if (index > 1) letters[index].scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
+}

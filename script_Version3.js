@@ -110,11 +110,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
   faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
 
-  let gazeDelayLeft = 0;
-  let gazeDelayRight = 0;
-
-  const GAZE_DELAY_LEFT = 600;   // Left: more sensitive (0.6 seconds)
-  const GAZE_DELAY_RIGHT = 1800; // Right: less sensitive/slower (1.8 seconds)
+  // --- SINGLE-STEP HORIZONTAL GAZE with flags ---
+  let leftMoved = false;
+  let rightMoved = false;
 
   const EAR_THRESHOLD = 0.25;
   const BLINK_COOLDOWN = 400;
@@ -200,21 +198,25 @@ document.addEventListener('DOMContentLoaded', function () {
       blinkStartTime = 0;
     }
 
-    // --- Horizontal gaze movement: separate left/right sensitivity ---
+    // --- SINGLE-STEP Horizontal gaze movement ---
     const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
     const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
 
-    if (ratioX < 0.42 && now - gazeDelayLeft > GAZE_DELAY_LEFT) {
-      setActiveLetter((activeIndex - 1 + letters.length) % letters.length);
-      gazeDelayLeft = now;
-    } else if (ratioX > 0.58 && now - gazeDelayRight > GAZE_DELAY_RIGHT) {
-      setActiveLetter((activeIndex + 1) % letters.length);
-      gazeDelayRight = now;
-    }
-    // Reset delays in neutral position
-    if (ratioX >= 0.42 && ratioX <= 0.58) {
-      gazeDelayLeft = 0;
-      gazeDelayRight = 0;
+    if (ratioX < 0.42) {
+      if (!leftMoved) {
+        setActiveLetter((activeIndex - 1 + letters.length) % letters.length);
+        leftMoved = true;
+        rightMoved = false;
+      }
+    } else if (ratioX > 0.58) {
+      if (!rightMoved) {
+        setActiveLetter((activeIndex + 1) % letters.length);
+        rightMoved = true;
+        leftMoved = false;
+      }
+    } else {
+      leftMoved = false;
+      rightMoved = false;
     }
   });
 

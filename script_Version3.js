@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard: Both-Eyes Blink = Space Only ---
+// --- Eye-Typing Keyboard: Single "click" left/right per gaze gesture ---
 
 document.addEventListener('DOMContentLoaded', function () {
   const video = document.getElementById('video');
@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
   faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
 
-  // --- SINGLE-STEP HORIZONTAL GAZE with flags ---
+  // --- Single-step horizontal gaze with flags ---
   let leftMoved = false;
   let rightMoved = false;
 
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function () {
       blinkStartTime = 0;
     }
 
-    // --- SINGLE-STEP Horizontal gaze movement ---
+    // --- SINGLE-STEP Horizontal gaze movement (no fast repeat, just one per gaze gesture) ---
     const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
     const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
 

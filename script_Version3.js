@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard: Robust, Deliberate Horizontal Movement (Wide Neutral Zone + Hold) ---
+// --- Eye-Typing Keyboard: Requires Center-hold Before Each Deliberate Horizontal Gaze Step ---
 
 document.addEventListener('DOMContentLoaded', function () {
   const video = document.getElementById('video');
@@ -110,12 +110,14 @@ document.addEventListener('DOMContentLoaded', function () {
   const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
   faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
 
-  // --- Final, Deliberate ONE-STEP gaze logic (wide neutral zone + hold) ---
-  let leftMoved = false, rightMoved = false;
-  let leftGazeStart = 0, rightGazeStart = 0;
-  const MIN_HOLD_GAZE = 500; // ms (adjust as needed for preference)
-  const leftThreshold = 0.34;   // must look far left for left step
-  const rightThreshold = 0.66;  // must look far right for right step
+  // Robust gesture logic:
+  let readyForHorizontalMove = false;
+  let centerHoldStart = 0, sideHoldStart = 0;
+  let lastDirection = null; // null, "left", or "right"
+  const NEUTRAL_HOLD = 250;  // ms in center required to "reset" and enable next left/right move
+  const SIDE_HOLD = 550;     // ms in side required to trigger movement
+  const leftThreshold = 0.33;     // must look this far left
+  const rightThreshold = 0.67;    // must look this far right
 
   const EAR_THRESHOLD = 0.25;
   const BLINK_COOLDOWN = 400;
@@ -201,31 +203,51 @@ document.addEventListener('DOMContentLoaded', function () {
       blinkStartTime = 0;
     }
 
-    // --- Robust, Deliberate single-step horizontal gaze movement ---
+    // --- Robust, deliberate single-step horizontal gaze movement with required center-hold ---
     const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
     const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
 
-    if (ratioX < leftThreshold) { // Looking far enough left
-      rightGazeStart = 0;
-      if (!leftGazeStart) leftGazeStart = now;
-      if (!leftMoved && (now - leftGazeStart > MIN_HOLD_GAZE)) {
-        setActiveLetter((activeIndex - 1 + letters.length) % letters.length);
-        leftMoved = true;
+    // Determine region: center, left, or right
+    let region = "center";
+    if (ratioX < leftThreshold) region = "left";
+    else if (ratioX > rightThreshold) region = "right";
+
+    // Handle the state machine:
+    if (region === "center") {
+      if (!centerHoldStart) centerHoldStart = now;
+      if ((now - centerHoldStart) > NEUTRAL_HOLD) {
+        readyForHorizontalMove = true;
+        lastDirection = null; // enable next move
       }
-    } else if (ratioX > rightThreshold) { // Looking far enough right
-      leftGazeStart = 0;
-      if (!rightGazeStart) rightGazeStart = now;
-      if (!rightMoved && (now - rightGazeStart > MIN_HOLD_GAZE)) {
-        setActiveLetter((activeIndex + 1) % letters.length);
-        rightMoved = true;
+      // Reset side hold so side-hold must be deliberate
+      sideHoldStart = 0;
+    } else if ((region === "left" || region === "right")) {
+      // Only move if ready (after sufficient center hold)
+      if (readyForHorizontalMove) {
+        if (!sideHoldStart) sideHoldStart = now;
+        // Only move if held at the side for our duration
+        if ((now - sideHoldStart) > SIDE_HOLD) {
+          if (region === "left" && lastDirection !== "left") {
+            setActiveLetter((activeIndex - 1 + letters.length) % letters.length);
+            lastDirection = "left";
+            readyForHorizontalMove = false; // must center again
+            centerHoldStart = 0;
+            sideHoldStart = 0;
+          } else if (region === "right" && lastDirection !== "right") {
+            setActiveLetter((activeIndex + 1) % letters.length);
+            lastDirection = "right";
+            readyForHorizontalMove = false; // must center again
+            centerHoldStart = 0;
+            sideHoldStart = 0;
+          }
+        }
+      } else {
+        // Not ready: must have visited center first.
+        sideHoldStart = 0;
       }
-    } else {
-      // In the wide neutral region, reset flags and both timers
-      leftGazeStart = 0;
-      rightGazeStart = 0;
-      leftMoved = false;
-      rightMoved = false;
     }
+    // If region is neither left nor right (i.e. center), also keep centerHoldStart up-to-date.
+    if (region !== "center") centerHoldStart = 0;
   });
 
   // --- Start camera ---

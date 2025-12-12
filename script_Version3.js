@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
       blinkStartTime = 0;
     }
 
-    // --- Robust, deliberate single-step horizontal gaze movement with required center-hold ---
+    // --- Final, robust horizontal gaze movement logic ---
     const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
     const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
 
@@ -212,41 +212,40 @@ document.addEventListener('DOMContentLoaded', function () {
     if (ratioX < leftThreshold) region = "left";
     else if (ratioX > rightThreshold) region = "right";
 
-    // Handle the state machine:
     if (region === "center") {
       if (!centerHoldStart) centerHoldStart = now;
       if ((now - centerHoldStart) > NEUTRAL_HOLD) {
         readyForHorizontalMove = true;
-        lastDirection = null; // enable next move
+        lastDirection = null;  // This line fixes left movement!
       }
-      // Reset side hold so side-hold must be deliberate
       sideHoldStart = 0;
-    } else if ((region === "left" || region === "right")) {
-      // Only move if ready (after sufficient center hold)
-      if (readyForHorizontalMove) {
+    } else if (region === "left") {
+      if (readyForHorizontalMove && lastDirection !== "left") {
         if (!sideHoldStart) sideHoldStart = now;
-        // Only move if held at the side for our duration
         if ((now - sideHoldStart) > SIDE_HOLD) {
-          if (region === "left" && lastDirection !== "left") {
-            setActiveLetter((activeIndex - 1 + letters.length) % letters.length);
-            lastDirection = "left";
-            readyForHorizontalMove = false; // must center again
-            centerHoldStart = 0;
-            sideHoldStart = 0;
-          } else if (region === "right" && lastDirection !== "right") {
-            setActiveLetter((activeIndex + 1) % letters.length);
-            lastDirection = "right";
-            readyForHorizontalMove = false; // must center again
-            centerHoldStart = 0;
-            sideHoldStart = 0;
-          }
+          setActiveLetter((activeIndex - 1 + letters.length) % letters.length);
+          lastDirection = "left";
+          readyForHorizontalMove = false; // must center again
+          centerHoldStart = 0;
+          sideHoldStart = 0;
         }
-      } else {
-        // Not ready: must have visited center first.
+      } else if (lastDirection === "left") {
+        sideHoldStart = 0;
+      }
+    } else if (region === "right") {
+      if (readyForHorizontalMove && lastDirection !== "right") {
+        if (!sideHoldStart) sideHoldStart = now;
+        if ((now - sideHoldStart) > SIDE_HOLD) {
+          setActiveLetter((activeIndex + 1) % letters.length);
+          lastDirection = "right";
+          readyForHorizontalMove = false; // must center again
+          centerHoldStart = 0;
+          sideHoldStart = 0;
+        }
+      } else if (lastDirection === "right") {
         sideHoldStart = 0;
       }
     }
-    // If region is neither left nor right (i.e. center), also keep centerHoldStart up-to-date.
     if (region !== "center") centerHoldStart = 0;
   });
 

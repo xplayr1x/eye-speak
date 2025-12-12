@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard: Only Right-Eye Close Selects Letter, Nothing Else ---
+// --- Eye-Typing Keyboard: Right-eye long hold (not blink) = select letter ---
 
 document.addEventListener('DOMContentLoaded', function () {
   const video = document.getElementById('video');
@@ -109,16 +109,17 @@ document.addEventListener('DOMContentLoaded', function () {
   let lastDirection = null;
   const NEUTRAL_HOLD = 250;
   const SIDE_HOLD = 550;
-  const leftThreshold = 0.44; // easier left gaze
+  const leftThreshold = 0.44;
   const rightThreshold = 0.67;
 
   const EAR_THRESHOLD = 0.25;
   const BLINK_COOLDOWN = 400;
   const HOLD_DURATION = 1200;
   const LONG_BLINK_DURATION = 600;
+  const RIGHT_EYE_HOLD_DURATION = 650; // ms to trigger selection
 
   let framesClosed = 0, lastBlinkTime = 0, blinkStartTime = 0;
-  let rightEyeHoldActive = false;
+  let rightEyeHoldStart = 0, rightEyeHoldActive = false, rightEyeHoldDone = false;
   let leftEyeHoldStart = 0, leftEyeHoldActive = false, leftEyeHoldDone = false;
 
   faceMesh.onResults((results) => {
@@ -131,14 +132,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const earL = Math.hypot(lm[159].x-lm[145].x, lm[159].y-lm[145].y) / Math.hypot(lm[33].x-lm[133].x, lm[33].y-lm[133].y);
     const earR = Math.hypot(lm[386].x-lm[374].x, lm[386].y-lm[374].y) / Math.hypot(lm[362].x-lm[263].x, lm[362].y-lm[263].y);
 
-    // --- RIGHT EYE CLOSE (left EAR < threshold, right EAR >= threshold): SELECT LETTER ---
+    // --- RIGHT EYE HOLD (not blink): select letter only if hold is long enough ---
     if (earL < EAR_THRESHOLD && earR >= EAR_THRESHOLD) {
       if (!rightEyeHoldActive) {
-        selectLetter(activeIndex);
+        rightEyeHoldStart = now;
         rightEyeHoldActive = true;
+        rightEyeHoldDone = false;
+      }
+      if (!rightEyeHoldDone && now - rightEyeHoldStart > RIGHT_EYE_HOLD_DURATION) {
+        selectLetter(activeIndex);
+        rightEyeHoldDone = true;
       }
     } else {
       rightEyeHoldActive = false;
+      rightEyeHoldDone = false;
+      rightEyeHoldStart = 0;
     }
 
     // --- LEFT EYE hold: delete last (long), blink: play sentence (short) ---

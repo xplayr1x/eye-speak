@@ -116,8 +116,8 @@ document.addEventListener('DOMContentLoaded', function () {
   let lastDirection = null; // null, "left", or "right"
   const NEUTRAL_HOLD = 250;  // ms in center required to "reset" and enable next left/right move
   const SIDE_HOLD = 550;     // ms in side required to trigger movement
-  const leftThreshold = 0.67;     // must look this far left
-  const rightThreshold = 0.67;    // must look this far right
+  const leftThreshold = 0.75;     // must look this far left
+  const rightThreshold = 0.75;    // must look this far right
 
   const EAR_THRESHOLD = 0.25;
   const BLINK_COOLDOWN = 400;

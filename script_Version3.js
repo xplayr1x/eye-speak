@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard: Single deliberate "click" left/right per gaze gesture, with hold threshold ---
+// --- Eye-Typing Keyboard: Robust, Deliberate Horizontal Movement (Wide Neutral Zone + Hold) ---
 
 document.addEventListener('DOMContentLoaded', function () {
   const video = document.getElementById('video');
@@ -110,10 +110,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
   faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
 
-  // --- Gaze one-step movement with hold requirement ---
+  // --- Final, Deliberate ONE-STEP gaze logic (wide neutral zone + hold) ---
   let leftMoved = false, rightMoved = false;
   let leftGazeStart = 0, rightGazeStart = 0;
-  const MIN_HOLD_GAZE = 400; // ms to keep looking for move
+  const MIN_HOLD_GAZE = 500; // ms (adjust as needed for preference)
+  const leftThreshold = 0.34;   // must look far left for left step
+  const rightThreshold = 0.66;  // must look far right for right step
 
   const EAR_THRESHOLD = 0.25;
   const BLINK_COOLDOWN = 400;
@@ -199,18 +201,18 @@ document.addEventListener('DOMContentLoaded', function () {
       blinkStartTime = 0;
     }
 
-    // --- SINGLE-STEP Horizontal gaze movement with hold (no fast repeat, must hold for deliberate move) ---
+    // --- Robust, Deliberate single-step horizontal gaze movement ---
     const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
     const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
 
-    if (ratioX < 0.42) { // Looking left
+    if (ratioX < leftThreshold) { // Looking far enough left
       rightGazeStart = 0;
       if (!leftGazeStart) leftGazeStart = now;
       if (!leftMoved && (now - leftGazeStart > MIN_HOLD_GAZE)) {
         setActiveLetter((activeIndex - 1 + letters.length) % letters.length);
         leftMoved = true;
       }
-    } else if (ratioX > 0.58) { // Looking right
+    } else if (ratioX > rightThreshold) { // Looking far enough right
       leftGazeStart = 0;
       if (!rightGazeStart) rightGazeStart = now;
       if (!rightMoved && (now - rightGazeStart > MIN_HOLD_GAZE)) {
@@ -218,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function () {
         rightMoved = true;
       }
     } else {
-      // In the neutral region, allow next gesture
+      // In the wide neutral region, reset flags and both timers
       leftGazeStart = 0;
       rightGazeStart = 0;
       leftMoved = false;

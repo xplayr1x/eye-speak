@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard: Right-eye long hold (not blink) = select letter ---
+// --- Eye-Typing Keyboard: Only right eye held closed selects letter; no other right eye effects ---
 
 document.addEventListener('DOMContentLoaded', function () {
   const video = document.getElementById('video');
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const hideInstructionsBtn = document.getElementById('hide-instructions');
   const yesBtn = document.getElementById('yes-btn');
   const noBtn = document.getElementById('no-btn');
-  
+
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
     yesBtn.classList.toggle('selected', index === 0);
     noBtn.classList.toggle('selected', index === 1);
     activeIndex = index;
-    if (index > 1 && letters[index]) letters[index].scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
+    if (index > 1 && letters[index]) letters[index].scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
   }
 
   function selectLetter(index) {
@@ -68,13 +68,13 @@ document.addEventListener('DOMContentLoaded', function () {
   setActiveLetter(0);
 
   hideInstructionsBtn.addEventListener('click', () => instructions.style.display = 'none');
-  instructions.onmousedown = function(e){
+  instructions.onmousedown = function (e) {
     let shiftX = e.clientX - instructions.getBoundingClientRect().left;
     let shiftY = e.clientY - instructions.getBoundingClientRect().top;
-    function moveAt(pageX, pageY){ instructions.style.left = pageX - shiftX + 'px'; instructions.style.top = pageY - shiftY + 'px'; }
-    function onMouseMove(e){ moveAt(e.pageX, e.pageY); }
+    function moveAt(pageX, pageY) { instructions.style.left = pageX - shiftX + 'px'; instructions.style.top = pageY - shiftY + 'px'; }
+    function onMouseMove(e) { moveAt(e.pageX, e.pageY); }
     document.addEventListener('mousemove', onMouseMove);
-    document.onmouseup = function(){ document.removeEventListener('mousemove', onMouseMove); document.onmouseup=null; }
+    document.onmouseup = function () { document.removeEventListener('mousemove', onMouseMove); document.onmouseup = null; }
   };
   instructions.ondragstart = () => false;
 
@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // --- Eye Tracking with MediaPipe FaceMesh ---
   const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
-  faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
+  faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
   // Gesture logic:
   let readyForHorizontalMove = false;
@@ -123,16 +123,16 @@ document.addEventListener('DOMContentLoaded', function () {
   let leftEyeHoldStart = 0, leftEyeHoldActive = false, leftEyeHoldDone = false;
 
   faceMesh.onResults((results) => {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    if(!results.multiFaceLandmarks[0]) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!results.multiFaceLandmarks[0]) return;
     const lm = results.multiFaceLandmarks[0];
     const now = Date.now();
 
     // --- Eye Ratio Calculation (EAR) ---
-    const earL = Math.hypot(lm[159].x-lm[145].x, lm[159].y-lm[145].y) / Math.hypot(lm[33].x-lm[133].x, lm[33].y-lm[133].y);
-    const earR = Math.hypot(lm[386].x-lm[374].x, lm[386].y-lm[374].y) / Math.hypot(lm[362].x-lm[263].x, lm[362].y-lm[263].y);
+    const earL = Math.hypot(lm[159].x - lm[145].x, lm[159].y - lm[145].y) / Math.hypot(lm[33].x - lm[133].x, lm[33].y - lm[133].y);
+    const earR = Math.hypot(lm[386].x - lm[374].x, lm[386].y - lm[374].y) / Math.hypot(lm[362].x - lm[263].x, lm[362].y - lm[263].y);
 
-    // --- RIGHT EYE HOLD (not blink): select letter only if hold is long enough ---
+    // --- RIGHT EYE HOLD (not blink): select letter only if hold is long enough; otherwise does nothing ---
     if (earL < EAR_THRESHOLD && earR >= EAR_THRESHOLD) {
       if (!rightEyeHoldActive) {
         rightEyeHoldStart = now;
@@ -239,8 +239,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // --- Start camera ---
   const camera = new Camera(video, {
-    onFrame: async () => { await faceMesh.send({image:video}); },
-    width:640, height:480
+    onFrame: async () => { await faceMesh.send({ image: video }); },
+    width: 640, height: 480
   });
   camera.start();
 });

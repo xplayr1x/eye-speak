@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard: Requires Center-hold Before Each Deliberate Horizontal Gaze Step ---
+// --- Eye-Typing Keyboard: Only Right-Eye Close Selects Letter, Nothing Else ---
 
 document.addEventListener('DOMContentLoaded', function () {
   const video = document.getElementById('video');
@@ -15,9 +15,9 @@ document.addEventListener('DOMContentLoaded', function () {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  // --- Letters, Numbers + Special Keys (Each gets a box) ---
+  // --- Letters, Numbers + Special Keys ---
   const lettersArray = [
-    "YES", "NO",   // Big-Button selections
+    "YES", "NO",
     ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
     ..."0123456789",
     "Space", "Delete"
@@ -38,21 +38,17 @@ document.addEventListener('DOMContentLoaded', function () {
     letters.push(div);
   });
 
-  // --- YES/NO click support ---
   yesBtn.addEventListener('click', () => selectLetter(0));
   noBtn.addEventListener('click', () => selectLetter(1));
 
-  // --- Highlight logic for YES/NO ---
   function setActiveLetter(index) {
     letters.forEach((l, i) => l.classList.toggle('active', i === index));
     yesBtn.classList.toggle('selected', index === 0);
     noBtn.classList.toggle('selected', index === 1);
     activeIndex = index;
-    // Only scroll grid if not yes/no buttons
     if (index > 1 && letters[index]) letters[index].scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
   }
 
-  // --- Smart word/letter selection (YES/NO works + space prevention) ---
   function selectLetter(index) {
     const value = letters[index].textContent;
     if (value === "YES" || value === "NO") {
@@ -71,7 +67,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   setActiveLetter(0);
 
-  // --- Instructions panel drag & hide ---
   hideInstructionsBtn.addEventListener('click', () => instructions.style.display = 'none');
   instructions.onmousedown = function(e){
     let shiftX = e.clientX - instructions.getBoundingClientRect().left;
@@ -83,7 +78,6 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   instructions.ondragstart = () => false;
 
-  // --- Speech playback ---
   function speakSentence() {
     if (sentenceSpan.textContent.trim().length === 0) return;
     const utter = new SpeechSynthesisUtterance(sentenceSpan.textContent.trim());
@@ -97,7 +91,6 @@ document.addEventListener('DOMContentLoaded', function () {
     speechSynthesis.cancel();
   }
 
-  // --- Ensure play button is always enabled ---
   function enablePlayBtn() {
     playBtn.disabled = false;
     playBtn.style.opacity = 1;
@@ -110,14 +103,14 @@ document.addEventListener('DOMContentLoaded', function () {
   const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
   faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
 
-  // Robust gesture logic:
+  // Gesture logic:
   let readyForHorizontalMove = false;
   let centerHoldStart = 0, sideHoldStart = 0;
-  let lastDirection = null; // null, "left", or "right"
-  const NEUTRAL_HOLD = 250;  // ms in center required to "reset" and enable next left/right move
-  const SIDE_HOLD = 550;     // ms in side required to trigger movement
-  const leftThreshold = 0.75;     // must look this far left
-  const rightThreshold = 0.75;    // must look this far right
+  let lastDirection = null;
+  const NEUTRAL_HOLD = 250;
+  const SIDE_HOLD = 550;
+  const leftThreshold = 0.44; // easier left gaze
+  const rightThreshold = 0.67;
 
   const EAR_THRESHOLD = 0.25;
   const BLINK_COOLDOWN = 400;
@@ -125,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const LONG_BLINK_DURATION = 600;
 
   let framesClosed = 0, lastBlinkTime = 0, blinkStartTime = 0;
-  let rightEyeHoldStart = 0, rightEyeHoldActive = false, rightEyeHoldDone = false;
+  let rightEyeHoldActive = false;
   let leftEyeHoldStart = 0, leftEyeHoldActive = false, leftEyeHoldDone = false;
 
   faceMesh.onResults((results) => {
@@ -138,29 +131,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const earL = Math.hypot(lm[159].x-lm[145].x, lm[159].y-lm[145].y) / Math.hypot(lm[33].x-lm[133].x, lm[33].y-lm[133].y);
     const earR = Math.hypot(lm[386].x-lm[374].x, lm[386].y-lm[374].y) / Math.hypot(lm[362].x-lm[263].x, lm[362].y-lm[263].y);
 
-    // --- Right eye hold: stop sound (long), blink: select letter (short) ---
+    // --- RIGHT EYE CLOSE (left EAR < threshold, right EAR >= threshold): SELECT LETTER ---
     if (earL < EAR_THRESHOLD && earR >= EAR_THRESHOLD) {
       if (!rightEyeHoldActive) {
-        rightEyeHoldStart = now;
-        rightEyeHoldActive = true;
-        rightEyeHoldDone = false;
-      }
-      if (!rightEyeHoldDone && now - rightEyeHoldStart > HOLD_DURATION) {
-        stopSpeaking();
-        lastBlinkTime = now;
-        rightEyeHoldDone = true;
-      }
-    } else if (rightEyeHoldActive) {
-      if (!rightEyeHoldDone && now - rightEyeHoldStart > BLINK_COOLDOWN) {
         selectLetter(activeIndex);
-        lastBlinkTime = now;
+        rightEyeHoldActive = true;
       }
+    } else {
       rightEyeHoldActive = false;
-      rightEyeHoldDone = false;
-      rightEyeHoldStart = 0;
     }
 
-    // --- Left eye hold: delete last (long), blink: play sentence (short) ---
+    // --- LEFT EYE hold: delete last (long), blink: play sentence (short) ---
     if (earR < EAR_THRESHOLD && earL >= EAR_THRESHOLD) {
       if (!leftEyeHoldActive) {
         leftEyeHoldStart = now;
@@ -190,8 +171,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const prevIndex = activeIndex;
         const spaceIndex = lettersArray.findIndex(x => x === "Space");
         if (spaceIndex > -1) {
-          setActiveLetter(spaceIndex); // highlight
-          selectLetter(spaceIndex);    // add space
+          setActiveLetter(spaceIndex);
+          selectLetter(spaceIndex);
           setTimeout(() => setActiveLetter(prevIndex), 350);
         }
         lastBlinkTime = now;
@@ -203,11 +184,10 @@ document.addEventListener('DOMContentLoaded', function () {
       blinkStartTime = 0;
     }
 
-    // --- Final, robust horizontal gaze movement logic ---
+    // --- Robust, deliberate single-step horizontal gaze movement with required center-hold ---
     const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
     const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
 
-    // Determine region: center, left, or right
     let region = "center";
     if (ratioX < leftThreshold) region = "left";
     else if (ratioX > rightThreshold) region = "right";
@@ -216,7 +196,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!centerHoldStart) centerHoldStart = now;
       if ((now - centerHoldStart) > NEUTRAL_HOLD) {
         readyForHorizontalMove = true;
-        lastDirection = null;  // This line fixes left movement!
+        lastDirection = null;
       }
       sideHoldStart = 0;
     } else if (region === "left") {
@@ -225,7 +205,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if ((now - sideHoldStart) > SIDE_HOLD) {
           setActiveLetter((activeIndex - 1 + letters.length) % letters.length);
           lastDirection = "left";
-          readyForHorizontalMove = false; // must center again
+          readyForHorizontalMove = false;
           centerHoldStart = 0;
           sideHoldStart = 0;
         }
@@ -238,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if ((now - sideHoldStart) > SIDE_HOLD) {
           setActiveLetter((activeIndex + 1) % letters.length);
           lastDirection = "right";
-          readyForHorizontalMove = false; // must center again
+          readyForHorizontalMove = false;
           centerHoldStart = 0;
           sideHoldStart = 0;
         }

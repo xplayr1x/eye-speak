@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const NEUTRAL_HOLD = 250;
   const SIDE_HOLD = 550;
   const leftThreshold = 0.44;
-  const rightThreshold = 0.67;
+  const rightThreshold = 0.74;
 
   const EAR_THRESHOLD = 0.25;
   const BLINK_COOLDOWN = 400;

@@ -1,4 +1,4 @@
-// --- Eye-Typing Keyboard: Single "click" left/right per gaze gesture ---
+// --- Eye-Typing Keyboard: Single deliberate "click" left/right per gaze gesture, with hold threshold ---
 
 document.addEventListener('DOMContentLoaded', function () {
   const video = document.getElementById('video');
@@ -110,9 +110,10 @@ document.addEventListener('DOMContentLoaded', function () {
   const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
   faceMesh.setOptions({ maxNumFaces:1, refineLandmarks:true, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
 
-  // --- Single-step horizontal gaze with flags ---
-  let leftMoved = false;
-  let rightMoved = false;
+  // --- Gaze one-step movement with hold requirement ---
+  let leftMoved = false, rightMoved = false;
+  let leftGazeStart = 0, rightGazeStart = 0;
+  const MIN_HOLD_GAZE = 400; // ms to keep looking for move
 
   const EAR_THRESHOLD = 0.25;
   const BLINK_COOLDOWN = 400;
@@ -198,23 +199,28 @@ document.addEventListener('DOMContentLoaded', function () {
       blinkStartTime = 0;
     }
 
-    // --- SINGLE-STEP Horizontal gaze movement (no fast repeat, just one per gaze gesture) ---
+    // --- SINGLE-STEP Horizontal gaze movement with hold (no fast repeat, must hold for deliberate move) ---
     const leftIris = lm[468], leftEyeInner = lm[133], leftEyeOuter = lm[33];
     const ratioX = (leftIris.x - leftEyeInner.x) / (leftEyeOuter.x - leftEyeInner.x);
 
-    if (ratioX < 0.42) {
-      if (!leftMoved) {
+    if (ratioX < 0.42) { // Looking left
+      rightGazeStart = 0;
+      if (!leftGazeStart) leftGazeStart = now;
+      if (!leftMoved && (now - leftGazeStart > MIN_HOLD_GAZE)) {
         setActiveLetter((activeIndex - 1 + letters.length) % letters.length);
         leftMoved = true;
-        rightMoved = false;
       }
-    } else if (ratioX > 0.58) {
-      if (!rightMoved) {
+    } else if (ratioX > 0.58) { // Looking right
+      leftGazeStart = 0;
+      if (!rightGazeStart) rightGazeStart = now;
+      if (!rightMoved && (now - rightGazeStart > MIN_HOLD_GAZE)) {
         setActiveLetter((activeIndex + 1) % letters.length);
         rightMoved = true;
-        leftMoved = false;
       }
     } else {
+      // In the neutral region, allow next gesture
+      leftGazeStart = 0;
+      rightGazeStart = 0;
       leftMoved = false;
       rightMoved = false;
     }
